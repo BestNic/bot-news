@@ -9,10 +9,11 @@ import os
 # =========================
 # TOKEN DA RAILWAY
 # =========================
-TOKEN = os.getenv("8625776609:AAFimwaOBDJUZQIRy0CSzAckFfhU26bJ4kw")
+import os
+
+TOKEN = os.getenv("TOKEN")
 
 bot = telebot.TeleBot(TOKEN)
-
 # =========================
 # ESTRAZIONE DATI DAL LINK
 # =========================
