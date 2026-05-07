@@ -33,11 +33,28 @@ def extract_data(url):
         desc_list = []
 
         for p in paragraphs:
-            text = p.get_text().strip()
+            text = p.get_text(separator=" ").strip()
 
-            if len(text) < 50:
-                continue
+# rimuove caratteri strani
+text = text.encode("utf-8", "ignore").decode("utf-8")
 
+# pulizia simboli brutti
+bad_chars = [" ", "□", "\\xa0"]
+
+for c in bad_chars:
+    text = text.replace(c, "")
+
+# evita spazi doppi
+text = " ".join(text.split())
+
+            if "javascript" in text.lower():
+    continue
+
+if "loading" in text.lower():
+    continue
+
+if "advertisement" in text.lower():
+    continue
             if "cookie" in text.lower():
                 continue
 
@@ -50,7 +67,7 @@ def extract_data(url):
             if len(desc_list) >= 10:
                 break
 
-        desc = "\n\n".join(desc_list)
+        desc = "\n\n".join(desc_list[:5])
 
         if len(desc) < 100:
             desc = (
@@ -124,11 +141,7 @@ def create_image(title, img_url):
     )
 
     # ===== FONT =====
-    try:
-        font = ImageFont.truetype(
-            "arialbd.ttf",
-            48
-        )
+  font = ImageFont.truetype("arialbd.ttf", 64)
 
     except:
         font = ImageFont.load_default()
@@ -136,10 +149,7 @@ def create_image(title, img_url):
     # ===== TESTO =====
     title = title.upper()
 
-    wrapped = textwrap.fill(
-        title,
-        width=28
-    )
+ wrapped = textwrap.fill(title, width=20)
 
     bbox = draw.multiline_textbbox(
         (0, 0),
