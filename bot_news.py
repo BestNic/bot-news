@@ -7,76 +7,113 @@ import textwrap
 import os
 
 # =========================
-# TOKEN DA RAILWAY
+# TOKEN RAILWAY
 # =========================
-import os
-
 TOKEN = os.getenv("TOKEN")
 
 bot = telebot.TeleBot(TOKEN)
+
 # =========================
-# ESTRAZIONE DATI DAL LINK
+# ESTRAZIONE DATI
 # =========================
 def extract_data(url):
-    headers = {"User-Agent": "Mozilla/5.0"}
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
     try:
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(
+            url,
+            headers=headers,
+            timeout=10
+        )
+
         soup = BeautifulSoup(r.text, "html.parser")
 
-        # ===== TITOLO =====
-        title = soup.title.string if soup.title else "Notizia importante"
-        title = title.split("-")[0].split("|")[0].strip()
+        # =========================
+        # TITOLO
+        # =========================
+        title = soup.title.string if soup.title else "ULTIMA ORA"
 
-        # ===== DESCRIZIONE LUNGA =====
+        title = (
+            title
+            .split("-")[0]
+            .split("|")[0]
+            .strip()
+        )
+
+        # =========================
+        # DESCRIZIONE
+        # =========================
         paragraphs = soup.find_all("p")
+
         desc_list = []
 
         for p in paragraphs:
-            text = p.get_text(separator=" ").strip()
 
-# rimuove caratteri strani
-text = text.encode("utf-8", "ignore").decode("utf-8")
+            text = p.get_text(
+                separator=" "
+            ).strip()
 
-# pulizia simboli brutti
-bad_chars = [" ", "□", "\\xa0"]
+            # ===== PULIZIA =====
+            text = text.encode(
+                "utf-8",
+                "ignore"
+            ).decode("utf-8")
 
-for c in bad_chars:
-    text = text.replace(c, "")
+            bad_chars = [
+                "�",
+                "□",
+                "\\xa0"
+            ]
 
-# evita spazi doppi
-text = " ".join(text.split())
+            for c in bad_chars:
+                text = text.replace(c, "")
 
-            if "javascript" in text.lower():
-    continue
+            text = " ".join(text.split())
 
-if "loading" in text.lower():
-    continue
+            # ===== FILTRI =====
+            if len(text) < 60:
+                continue
 
-if "advertisement" in text.lower():
-    continue
             if "cookie" in text.lower():
                 continue
 
             if "pubblicità" in text.lower():
                 continue
 
+            if "javascript" in text.lower():
+                continue
+
+            if "loading" in text.lower():
+                continue
+
+            if "advertisement" in text.lower():
+                continue
+
             desc_list.append(text)
 
-            # prende fino a 10 paragrafi
-            if len(desc_list) >= 10:
+            # massimo 5 paragrafi
+            if len(desc_list) >= 5:
                 break
 
-        desc = "\n\n".join(desc_list[:5])
+        desc = "\n\n".join(desc_list)
 
         if len(desc) < 100:
             desc = (
-                "Non sono disponibili molti dettagli, "
-                "ma la notizia è in aggiornamento."
+                "La notizia è in aggiornamento. "
+                "Seguiranno ulteriori dettagli "
+                "nelle prossime ore."
             )
 
-        # ===== IMMAGINE =====
-        img_tag = soup.find("meta", property="og:image")
+        # =========================
+        # IMMAGINE
+        # =========================
+        img_tag = soup.find(
+            "meta",
+            property="og:image"
+        )
 
         if img_tag:
             img_url = img_tag["content"]
@@ -86,50 +123,64 @@ if "advertisement" in text.lower():
         return title, desc, img_url
 
     except Exception as e:
+
         print(e)
 
         return (
-            "Notizia importante",
-            "Errore nel recupero della notizia",
+            "ULTIMA ORA",
+            "Errore nel recupero della notizia.",
             "https://picsum.photos/1080/1350"
         )
 
 # =========================
-# CREA IMMAGINE NEWS PRO
+# CREA IMMAGINE
 # =========================
 def create_image(title, img_url):
 
     try:
         response = requests.get(img_url)
-        base_img = Image.open(BytesIO(response.content)).convert("RGB")
+
+        base_img = Image.open(
+            BytesIO(response.content)
+        ).convert("RGB")
 
     except:
+
         base_img = Image.new(
             "RGB",
             (1080, 1000),
-            color=(30, 30, 30)
+            color=(20, 20, 20)
         )
 
-    # ===== TELA NERA =====
+    # =========================
+    # SFONDO NERO
+    # =========================
     final_img = Image.new(
         "RGB",
         (1080, 1350),
         (0, 0, 0)
     )
 
-    # ===== IMMAGINE =====
-    base_img = base_img.resize((1040, 1000))
+    # =========================
+    # IMMAGINE
+    # =========================
+    base_img = base_img.resize(
+        (1040, 1000)
+    )
 
     x_img = (1080 - 1040) // 2
     y_img = 80
 
-    final_img.paste(base_img, (x_img, y_img))
+    final_img.paste(
+        base_img,
+        (x_img, y_img)
+    )
 
-    draw = ImageDraw.Draw(final_img)
-
-    # ===== OVERLAY =====
+    # =========================
+    # OVERLAY
+    # =========================
     overlay = Image.new(
-        'RGBA',
+        "RGBA",
         (1040, 1000),
         (0, 0, 0, 70)
     )
@@ -140,16 +191,29 @@ def create_image(title, img_url):
         overlay
     )
 
-    # ===== FONT =====
-  font = ImageFont.truetype("arialbd.ttf", 64)
+    draw = ImageDraw.Draw(final_img)
+
+    # =========================
+    # FONT
+    # =========================
+    try:
+        font = ImageFont.truetype(
+            "arialbd.ttf",
+            64
+        )
 
     except:
         font = ImageFont.load_default()
 
-    # ===== TESTO =====
+    # =========================
+    # TESTO
+    # =========================
     title = title.upper()
 
- wrapped = textwrap.fill(title, width=20)
+    wrapped = textwrap.fill(
+        title,
+        width=20
+    )
 
     bbox = draw.multiline_textbbox(
         (0, 0),
@@ -161,24 +225,27 @@ def create_image(title, img_url):
     text_h = bbox[3] - bbox[1]
 
     x_text = (1080 - text_w) // 2
-    y_text = y_img + 720
+    y_text = y_img + 650
 
-    # ===== BOX NEWS =====
-    padding = 20
+    # =========================
+    # BOX NEWS
+    # =========================
+    padding = 35
 
     box_x1 = x_text - padding
     box_y1 = y_text - padding
+
     box_x2 = x_text + text_w + padding
     box_y2 = y_text + text_h + padding
 
     # sfondo box
     box_bg = Image.new(
-        'RGBA',
+        "RGBA",
         (
             box_x2 - box_x1,
             box_y2 - box_y1
         ),
-        (0, 0, 0, 160)
+        (0, 0, 0, 170)
     )
 
     final_img.paste(
@@ -187,7 +254,7 @@ def create_image(title, img_url):
         box_bg
     )
 
-    # bordo box
+    # bordo bianco
     draw.rectangle(
         [
             box_x1,
@@ -196,20 +263,27 @@ def create_image(title, img_url):
             box_y2
         ],
         outline="white",
-        width=3
+        width=4
     )
 
-    # ===== TESTO =====
+    # =========================
+    # TESTO FINALE
+    # =========================
     draw.multiline_text(
         (x_text, y_text),
         wrapped,
         font=font,
-        fill=(255, 255, 255)
+        fill=(255, 255, 255),
+        align="center"
     )
 
-    # ===== LOGO =====
+    # =========================
+    # LOGO
+    # =========================
     try:
-        logo = Image.open("logo.png").convert("RGBA")
+        logo = Image.open(
+            "logo.png"
+        ).convert("RGBA")
 
         logo_size = 90
 
@@ -229,7 +303,9 @@ def create_image(title, img_url):
     except:
         pass
 
-    # ===== SALVA =====
+    # =========================
+    # SALVA
+    # =========================
     output = BytesIO()
 
     final_img.save(
@@ -254,7 +330,7 @@ def start(message):
     )
 
 # =========================
-# RICEZIONE LINK
+# LINK NEWS
 # =========================
 @bot.message_handler(
     func=lambda message: message.text.startswith("http")
@@ -275,20 +351,20 @@ def news(message):
         img_url
     )
 
-    # ===== FOTO =====
+    # FOTO
     bot.send_photo(
         message.chat.id,
         img
     )
 
-    # ===== TESTO =====
+    # DESCRIZIONE
     bot.send_message(
         message.chat.id,
         f"📰 {title}\n\n{desc}"
     )
 
 # =========================
-# AVVIO BOT
+# AVVIO
 # =========================
 print("Bot avviato...")
 
