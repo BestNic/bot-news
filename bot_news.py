@@ -38,10 +38,16 @@ def extract_data(url):
 
         title = (
             title
+            .replace("\n", "")
+            .replace("\t", "")
             .split("-")[0]
             .split("|")[0]
             .strip()
         )
+
+        # evita titoli troppo lunghi
+        if len(title) > 120:
+            title = title[:120] + "..."
 
         # =========================
         # DESCRIZIONE
@@ -52,11 +58,9 @@ def extract_data(url):
 
         for p in paragraphs:
 
-            text = p.get_text(
-                separator=" "
-            ).strip()
+            text = p.get_text(separator=" ").strip()
 
-            # ===== PULIZIA =====
+            # pulizia caratteri
             text = text.encode(
                 "utf-8",
                 "ignore"
@@ -65,7 +69,9 @@ def extract_data(url):
             bad_chars = [
                 "�",
                 "□",
-                "\\xa0"
+                "\\xa0",
+                "Â",
+                "â"
             ]
 
             for c in bad_chars:
@@ -73,34 +79,34 @@ def extract_data(url):
 
             text = " ".join(text.split())
 
-            # ===== FILTRI =====
-            if len(text) < 60:
+            # filtri
+            if len(text) < 70:
                 continue
 
             if "cookie" in text.lower():
                 continue
 
-            if "pubblicità" in text.lower():
-                continue
-
             if "javascript" in text.lower():
-                continue
-
-            if "loading" in text.lower():
                 continue
 
             if "advertisement" in text.lower():
                 continue
 
+            if "pubblicità" in text.lower():
+                continue
+
+            if "loading" in text.lower():
+                continue
+
             desc_list.append(text)
 
-            # massimo 5 paragrafi
             if len(desc_list) >= 5:
                 break
 
         desc = "\n\n".join(desc_list)
 
-        if len(desc) < 100:
+        # fallback
+        if len(desc) < 120:
             desc = (
                 "La notizia è in aggiornamento. "
                 "Seguiranno ulteriori dettagli "
@@ -138,7 +144,11 @@ def extract_data(url):
 def create_image(title, img_url):
 
     try:
-        response = requests.get(img_url)
+
+        response = requests.get(
+            img_url,
+            timeout=10
+        )
 
         base_img = Image.open(
             BytesIO(response.content)
@@ -153,7 +163,7 @@ def create_image(title, img_url):
         )
 
     # =========================
-    # SFONDO NERO
+    # TELA FINALE
     # =========================
     final_img = Image.new(
         "RGB",
@@ -164,11 +174,9 @@ def create_image(title, img_url):
     # =========================
     # IMMAGINE
     # =========================
-    base_img = base_img.resize(
-        (1040, 1000)
-    )
+    base_img = base_img.resize((1040, 1000))
 
-    x_img = (1080 - 1040) // 2
+    x_img = 20
     y_img = 80
 
     final_img.paste(
@@ -177,12 +185,12 @@ def create_image(title, img_url):
     )
 
     # =========================
-    # OVERLAY
+    # OVERLAY SCURO
     # =========================
     overlay = Image.new(
         "RGBA",
         (1040, 1000),
-        (0, 0, 0, 70)
+        (0, 0, 0, 85)
     )
 
     final_img.paste(
@@ -194,15 +202,17 @@ def create_image(title, img_url):
     draw = ImageDraw.Draw(final_img)
 
     # =========================
-    # FONT
+    # FONT GRANDE
     # =========================
     try:
+
         font = ImageFont.truetype(
             "arialbd.ttf",
-            64
+            82
         )
 
     except:
+
         font = ImageFont.load_default()
 
     # =========================
@@ -212,40 +222,42 @@ def create_image(title, img_url):
 
     wrapped = textwrap.fill(
         title,
-        width=20
+        width=16
     )
 
     bbox = draw.multiline_textbbox(
         (0, 0),
         wrapped,
-        font=font
+        font=font,
+        spacing=15
     )
 
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
 
     x_text = (1080 - text_w) // 2
-    y_text = y_img + 650
+    y_text = 690
 
     # =========================
-    # BOX NEWS
+    # BOX TESTO
     # =========================
-    padding = 35
+    padding_x = 40
+    padding_y = 30
 
-    box_x1 = x_text - padding
-    box_y1 = y_text - padding
+    box_x1 = x_text - padding_x
+    box_y1 = y_text - padding_y
 
-    box_x2 = x_text + text_w + padding
-    box_y2 = y_text + text_h + padding
+    box_x2 = x_text + text_w + padding_x
+    box_y2 = y_text + text_h + padding_y
 
-    # sfondo box
+    # sfondo nero elegante
     box_bg = Image.new(
         "RGBA",
         (
             box_x2 - box_x1,
             box_y2 - box_y1
         ),
-        (0, 0, 0, 170)
+        (0, 0, 0, 185)
     )
 
     final_img.paste(
@@ -263,7 +275,7 @@ def create_image(title, img_url):
             box_y2
         ],
         outline="white",
-        width=4
+        width=5
     )
 
     # =========================
@@ -274,6 +286,7 @@ def create_image(title, img_url):
         wrapped,
         font=font,
         fill=(255, 255, 255),
+        spacing=15,
         align="center"
     )
 
@@ -281,18 +294,19 @@ def create_image(title, img_url):
     # LOGO
     # =========================
     try:
+
         logo = Image.open(
             "logo.png"
         ).convert("RGBA")
 
-        logo_size = 90
+        logo_size = 100
 
         logo = logo.resize(
             (logo_size, logo_size)
         )
 
-        logo_x = x_img + 1040 - logo_size - 15
-        logo_y = y_img + 15
+        logo_x = 920
+        logo_y = 100
 
         final_img.paste(
             logo,
@@ -330,7 +344,7 @@ def start(message):
     )
 
 # =========================
-# LINK NEWS
+# RICEZIONE LINK
 # =========================
 @bot.message_handler(
     func=lambda message: message.text.startswith("http")
@@ -357,7 +371,7 @@ def news(message):
         img
     )
 
-    # DESCRIZIONE
+    # TESTO
     bot.send_message(
         message.chat.id,
         f"📰 {title}\n\n{desc}"
