@@ -32,25 +32,7 @@ def extract_data(url):
 
         soup = BeautifulSoup(r.text, "html.parser")
 
-        # =========================
-        # TITOLO
-        # =========================
-        title = "ULTIMA ORA"
-
-        if soup.title and soup.title.string:
-            title = soup.title.string
-
-        title = (
-            title
-            .replace("\n", "")
-            .replace("\t", "")
-            .split("|")[0]
-            .split("-")[0]
-            .strip()
-        )
-
-        # evita titoli troppo lunghi
-        if len(title) > 80:
+        # ===========
             title = title[:80]
 
         # =========================
